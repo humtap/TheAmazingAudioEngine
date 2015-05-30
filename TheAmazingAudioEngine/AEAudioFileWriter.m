@@ -41,7 +41,7 @@ static inline BOOL _checkResult(OSStatus result, const char *operation, const ch
 @interface AEAudioFileWriter () {
     BOOL                        _writing;
     ExtAudioFileRef             _audioFile;
-    UInt32                      _priorMixOverrideValue;
+//    UInt32                      _priorMixOverrideValue;
     AudioStreamBasicDescription _audioDescription;
 }
 
@@ -130,20 +130,20 @@ static inline BOOL _checkResult(OSStatus result, const char *operation, const ch
             return NO;
         }
         
-        AVAudioSession *audioSession = [AVAudioSession sharedInstance];
-        
+//        AVAudioSession *audioSession = [AVAudioSession sharedInstance];
+      
         // AAC won't work if the 'mix with others' session property is enabled. Disable it if it's on.
-        UInt32 size = sizeof(_priorMixOverrideValue);
-        _priorMixOverrideValue = audioSession.categoryOptions & AVAudioSessionCategoryOptionMixWithOthers;
-        
-        if ( _priorMixOverrideValue != NO ) {
-            NSError *error = nil;
-            if ( ![audioSession setCategory:audioSession.category
-                                withOptions:audioSession.categoryOptions & ~AVAudioSessionCategoryOptionMixWithOthers
-                                      error:&error] ) {
-                NSLog(@"Couldn't update category options: %@", error);
-            }
-        }
+//        UInt32 size = sizeof(_priorMixOverrideValue);
+//        _priorMixOverrideValue = audioSession.categoryOptions & AVAudioSessionCategoryOptionMixWithOthers;
+//        
+//        if ( _priorMixOverrideValue != NO ) {
+//            NSError *error = nil;
+//            if ( ![audioSession setCategory:audioSession.category
+//                                withOptions:audioSession.categoryOptions & ~AVAudioSessionCategoryOptionMixWithOthers
+//                                      error:&error] ) {
+//                NSLog(@"Couldn't update category options: %@", error);
+//            }
+//        }
 
         // Get the output audio description
         AudioStreamBasicDescription destinationFormat;
@@ -151,16 +151,16 @@ static inline BOOL _checkResult(OSStatus result, const char *operation, const ch
         destinationFormat.mChannelsPerFrame = channels;
         destinationFormat.mSampleRate = _audioDescription.mSampleRate;
         destinationFormat.mFormatID = kAudioFormatMPEG4AAC;
-        size = sizeof(destinationFormat);
-        status = AudioFormatGetProperty(kAudioFormatProperty_FormatInfo, 0, NULL, &size, &destinationFormat);
-        if ( !checkResult(status, "AudioFormatGetProperty(kAudioFormatProperty_FormatInfo") ) {
-            int fourCC = CFSwapInt32HostToBig(status);
-            if ( error ) *error = [NSError errorWithDomain:NSOSStatusErrorDomain 
-                                                      code:status 
-                                                  userInfo:@{NSLocalizedDescriptionKey: [NSString stringWithFormat:NSLocalizedString(@"Couldn't prepare the output format (error %d/%4.4s)", @""), status, (char*)&fourCC]}];
-            return NO;
-        }
-        
+//        size = sizeof(destinationFormat);
+//        status = AudioFormatGetProperty(kAudioFormatProperty_FormatInfo, 0, NULL, &size, &destinationFormat);
+//        if ( !checkResult(status, "AudioFormatGetProperty(kAudioFormatProperty_FormatInfo") ) {
+//            int fourCC = CFSwapInt32HostToBig(status);
+//            if ( error ) *error = [NSError errorWithDomain:NSOSStatusErrorDomain
+//                                                      code:status 
+//                                                  userInfo:@{NSLocalizedDescriptionKey: [NSString stringWithFormat:NSLocalizedString(@"Couldn't prepare the output format (error %d/%4.4s)", @""), status, (char*)&fourCC]}];
+//            return NO;
+//        }
+      
         // Create the file
         status = ExtAudioFileCreateWithURL((__bridge CFURLRef)[NSURL fileURLWithPath:path], 
                                            kAudioFileM4AType, 
@@ -244,15 +244,15 @@ static inline BOOL _checkResult(OSStatus result, const char *operation, const ch
     
     checkResult(ExtAudioFileDispose(_audioFile), "AudioFileClose");
     
-    if ( _priorMixOverrideValue ) {
-        NSError *error = nil;
-        AVAudioSession *audioSession = [AVAudioSession sharedInstance];
-        if ( ![audioSession setCategory:audioSession.category
-                            withOptions:audioSession.categoryOptions | AVAudioSessionCategoryOptionMixWithOthers
-                                  error:&error] ) {
-            NSLog(@"Couldn't update category options: %@", error);
-        }
-    }
+//    if ( _priorMixOverrideValue ) {
+//        NSError *error = nil;
+//        AVAudioSession *audioSession = [AVAudioSession sharedInstance];
+//        if ( ![audioSession setCategory:audioSession.category
+//                            withOptions:audioSession.categoryOptions | AVAudioSessionCategoryOptionMixWithOthers
+//                                  error:&error] ) {
+//            NSLog(@"Couldn't update category options: %@", error);
+//        }
+//    }
 }
 
 OSStatus AEAudioFileWriterAddAudio(__unsafe_unretained AEAudioFileWriter* THIS, AudioBufferList *bufferList, UInt32 lengthInFrames) {
