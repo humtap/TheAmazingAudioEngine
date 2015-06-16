@@ -55,6 +55,7 @@ static const int kInputChannelsChangedContext;
 @property (nonatomic, strong) UIButton *recordButton;
 @property (nonatomic, strong) UIButton *playButton;
 @property (nonatomic, strong) UIButton *oneshotButton;
+@property (nonatomic, strong) UIButton *renderButton;
 @property (nonatomic, strong) UIButton *oneshotAudioUnitButton;
 @end
 
@@ -198,14 +199,26 @@ static const int kInputChannelsChangedContext;
     [_recordButton addTarget:self action:@selector(record:) forControlEvents:UIControlEventTouchUpInside];
     _recordButton.frame = CGRectMake(20, 10, ((footerView.bounds.size.width-50) / 2), footerView.bounds.size.height - 20);
     _recordButton.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleRightMargin;
-    self.playButton = [UIButton buttonWithType:UIButtonTypeRoundedRect];
-    [_playButton setTitle:@"Play" forState:UIControlStateNormal];
-    [_playButton setTitle:@"Stop" forState:UIControlStateSelected];
-    [_playButton addTarget:self action:@selector(play:) forControlEvents:UIControlEventTouchUpInside];
-    _playButton.frame = CGRectMake(CGRectGetMaxX(_recordButton.frame)+10, 10, ((footerView.bounds.size.width-50) / 2), footerView.bounds.size.height - 20);
-    _playButton.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleLeftMargin;
+    
+    self.renderButton = [UIButton buttonWithType:UIButtonTypeRoundedRect];
+    [_renderButton setTitle:@"Render" forState:UIControlStateNormal];
+    [_renderButton setTitle:@"Stop" forState:UIControlStateSelected];
+    [_renderButton addTarget:self action:@selector(render:) forControlEvents:UIControlEventTouchUpInside];
+    
+    _renderButton.frame = CGRectMake(CGRectGetMaxX(_recordButton.frame)+10, 10, ((footerView.bounds.size.width-50) / 2), footerView.bounds.size.height - 20);
+    _renderButton.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleLeftMargin;
+    
+    
+//    self.playButton = [UIButton buttonWithType:UIButtonTypeRoundedRect];
+//    [_playButton setTitle:@"Play" forState:UIControlStateNormal];
+//    [_playButton setTitle:@"Stop" forState:UIControlStateSelected];
+//    [_playButton addTarget:self action:@selector(play:) forControlEvents:UIControlEventTouchUpInside];
+//    _playButton.frame = CGRectMake(CGRectGetMaxX(_recordButton.frame)+10, 10, ((footerView.bounds.size.width-50) / 2), footerView.bounds.size.height - 20);
+//    _playButton.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleLeftMargin;
     [footerView addSubview:_recordButton];
-    [footerView addSubview:_playButton];
+    [footerView addSubview:_renderButton];
+//    [footerView addSubview:_playButton];
+    
     self.tableView.tableFooterView = footerView;
 }
 
@@ -601,7 +614,43 @@ static const int kInputChannelsChangedContext;
 - (void)highlightButtonDelayed:(UIButton*)button {
     button.highlighted = YES;
 }
-
+- (void)render:(id)sender {
+    
+    NSArray *documentsFolders = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+    NSString *path = [documentsFolders[0] stringByAppendingPathComponent:@"Recording.aiff"];
+    if ( ![[NSFileManager defaultManager] fileExistsAtPath:path] ) return;
+    
+    //    [self play:nil];
+    [self.audioController stop];
+    const int kBufferLength = 4096;
+    NSTimeInterval renderDuration = 6; // hard coded value, just for testing
+    Float64 sampleRate = self.audioController.audioDescription.mSampleRate;
+    UInt32 lengthInFrames = (UInt32) (renderDuration * sampleRate);
+    AudioTimeStamp timeStamp;
+    memset (&timeStamp, 0, sizeof(timeStamp));
+    timeStamp.mFlags = kAudioTimeStampSampleTimeValid;
+    AEAudioFileWriter *audioFileWriter =
+    [[AEAudioFileWriter alloc] initWithAudioDescription:self.audioController.audioDescription];
+    AudioBufferList *buf =
+    AEAllocateAndInitAudioBufferList(self.audioController.audioDescription, kBufferLength);
+    
+    NSString *renderPath = [documentsFolders[0] stringByAppendingPathComponent:@"Rendering.m4a"];
+    
+    [audioFileWriter beginWritingToFileAtPath:renderPath fileType:kAudioFileM4AType error:nil];
+    for (UInt64 i = 0; i < lengthInFrames; i += kBufferLength) {
+        AEAudioControllerRenderMainOutput(self.audioController, timeStamp, kBufferLength, buf);
+        timeStamp.mSampleTime += kBufferLength;
+        OSStatus status = AEAudioFileWriterAddAudioSynchronously(audioFileWriter, buf, kBufferLength);
+        if (status != noErr) {
+            NSLog(@"ERROR: %d", (int) status);
+        }
+    }
+    [audioFileWriter finishWriting];
+    AEFreeAudioBufferList(buf);
+    [self.audioController start:nil];
+    //    [self play:nil];
+    NSLog(@"Finished");
+}
 - (void)record:(id)sender {
     if ( _recorder ) {
         [_recorder finishRecording];

@@ -1413,6 +1413,18 @@ NSTimeInterval AEAudioControllerInputLatency(AEAudioController *controller);
  */
 NSTimeInterval AEAudioControllerOutputLatency(AEAudioController *controller);
 
+#pragma mark - Offline render
+
+/*!
+ * Render main output into AudioBufferList.
+ * Use only while the AUGraph is not running.
+ */
+BOOL AEAudioControllerRenderMainOutput (
+                                        __unsafe_unretained AEAudioController *audioController,
+                                        AudioTimeStamp inTimeStamp,
+                                        UInt32 inNumberFrames,
+                                        AudioBufferList *ioData
+                                        );
 @end
 
 #ifdef __cplusplus

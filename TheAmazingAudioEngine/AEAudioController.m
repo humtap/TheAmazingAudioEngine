@@ -3784,6 +3784,24 @@ static void * firstUpstreamAudiobusSenderPort(AEChannelRef channel) {
     
     return [NSString stringWithFormat:@"%@%@%@", inputsString, inputsString.length > 0 && outputsString.length > 0 ? @" and " : @"", outputsString];
 }
+#pragma mark - Offline render
+
+BOOL AEAudioControllerRenderMainOutput(
+                                       __unsafe_unretained AEAudioController *audioController,
+                                       AudioTimeStamp inTimeStamp,
+                                       UInt32 inNumberFrames,
+                                       AudioBufferList *ioData
+                                       ) {
+    channel_producer_arg_t arg = {
+        .channel = audioController->_topChannel,
+        .timeStamp = inTimeStamp,
+        .ioActionFlags = 0,
+        .nextFilterIndex = 0
+    };
+    OSStatus result = channelAudioProducer((void *) &arg, ioData, &inNumberFrames);
+    handleCallbacksForChannel(arg.channel, &inTimeStamp, inNumberFrames, ioData);
+    return result;
+}
 
 @end
 
